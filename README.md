@@ -2,34 +2,47 @@
 
 **An evolutionary roguelike deckbuilder.** Play as a lineage: the deck is its genome, and gene cards power lethal fights against organisms and their environments.
 
-## Demo
+## Play the demo
 
-- 10 starting gene cards
-- 3 enemies: Spore Leech, Rival Colony, and Marsh Stalker
-- 3 environmental hazards: Oxygen-Poor Swamp, Flash Flood, and Severe Drought
-- Preparation phase, card draw, energy, poison, block, and enemy intents
-- Asexual Cell Division and sexual Mating, each innate and usable once per turn
-- Up to three offspring per generation, mutation/recombination, and successor selection
-- Three-generation playable run with inheritance choices and gene prerequisites
-
-## Run
-
-This prototype uses standard browser ES modules. From the repository directory:
+Clone the repository, start a local server, and open the browser:
 
 ```bash
+git clone https://github.com/BurnsRock/Clade.git
+cd Clade
 python3 -m http.server 4173
 ```
 
-Open **http://localhost:4173**.
+Visit **http://localhost:4173**. No npm install or build is needed. The demo uses dependency-free browser ES modules and works as a static site.
 
-The browser entry point is `index.html`, with compiled scripts in `web/`. The main source of truth is the TypeScript source in `src/`.
+## Features
 
-## Development
+- Ten starting gene cards, plus an innate reproductive action separate from the deck.
+- Three enemies: Spore Leech, Rival Colony, and Marsh Stalker.
+- Three environmental hazards: Oxygen-Poor Swamp, Flash Flood, and Severe Drought, with effects on both sides.
+- Turn 0 preparation, telegraphed enemy intents, energy, block, toxin, healing, card draw, and exhaust.
+- **Asexual Cell Division:** 1 Energy for a mostly identical offspring with occasional mutations.
+- **Sexual Mating:** 2 Energy for an offspring with two recombined genes from a simulated partner pool.
+- Reproduction can happen once per turn, generating up to three offspring choices in a generation.
+- Error-Prone Replication raises mutation opportunities at a cost in HP and energy.
+- Inherit a descendant genome and select an optional reward gene between generations.
+- Gene prerequisites, including cognition-gated Protect Offspring for sexual lineages.
+- Three-generation campaign with victory and extinction states.
+
+## Architecture
+
+`index.html` is the browser entry point; `style.css` is the responsive theme. The ES modules in `web/` are readable and directly editable:
+- `web/content.js` defines gene cards, enemies, and environments.
+- `web/engine.js` contains the deterministic, seedable, immutable game engine.
+- `web/main.js` renders the interface and dispatches actions.
+
+Run the automated Node test suite:
 
 ```bash
-npm install
-npm run build
 npm test
 ```
 
-The rules and limitations of the prototype are in `docs/DEMO_RULES.md`. This is a deliberately small vertical slice, not a full release.
+See `docs/DEMO_RULES.md` for the precise game rules and prototype limitations.
+
+## Notes
+
+This is a gameplay-first vertical slice, not a realistic evolutionary simulator. One encounter represents one generation. Reproduction is an innate action always available, rather than a random-draw card. At run start the player chooses asexual or sexual mode; a future version may unlock sexual reproduction through a boss relic. Branching speciation, larger gene pools, epigenetics, inherited objects, and cultural knowledge remain future extensions.
