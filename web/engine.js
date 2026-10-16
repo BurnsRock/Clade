@@ -1,4 +1,4 @@
-import { CARDS, ENCOUNTERS, ENEMIES, ENVIRONMENTS, MATE_POOL, MUTATION_POOL, REWARD_POOL, lineageFor, startingGenomeFor } from './content.js';
+import { CARDS, ENCOUNTERS, ENEMIES, ENVIRONMENTS, MATE_POOL, MUTATION_POOL, REWARD_POOL, TRAIT_LABELS, lineageFor, startingGenomeFor } from './content.js';
 
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const copy=s=>structuredClone(s);
@@ -24,6 +24,26 @@ export const currentLineage=s=>lineageFor(s.lineageId);
 export const currentEnemy=s=>ENEMIES.find(x=>x.id===ENCOUNTERS[s.generation-1].enemy);
 export const currentEnvironment=s=>ENVIRONMENTS.find(x=>x.id===ENCOUNTERS[s.generation-1].environment);
 export const currentTraits=s=>[...new Set(s.genePool.flatMap(g=>CARDS[g.id]?.traits||[]))].sort();
+export function pruneInvalidGenes(genePool,mode){
+ let remaining=genePool.map(g=>({...g}));const removed=[];let changed=true;
+ while(changed){
+  changed=false;
+  const ids=new Set(remaining.map(g=>g.id));
+  const next=[];
+  for(const gene of remaining){
+   const card=CARDS[gene.id];if(!card){removed.push({gene,requirements:['unknown gene']});changed=true;continue;}
+   const traits=new Set(remaining.filter(other=>other!==gene).flatMap(other=>CARDS[other.id]?.traits||[]));
+   const requirements=[
+    ...(card.requires||[]).filter(id=>!ids.has(id)).map(id=>CARDS[id]?.name||id),
+    ...(card.requiresTraits||[]).filter(trait=>!traits.has(trait)).map(trait=>TRAIT_LABELS[trait]||trait),
+    ...(card.requiresReproduction&&card.requiresReproduction!==mode?[`${card.requiresReproduction} reproduction`]:[])
+   ];
+   if(requirements.length){removed.push({gene,requirements});changed=true;}else next.push(gene);
+  }
+  remaining=next;
+ }
+ return {genePool:remaining,removed};
+}
 export function enemyIntent(s){
  const moves=currentEnemy(s).moves,turn=(Math.max(s.round,1)-1)%moves.length;
  return moves[turn];
@@ -72,6 +92,9 @@ function makeOffspring(s){
   }
  }else if(roll(s)<.12)mutate(s,genome,changes);
  for(let i=0;i<s.pendingMutations;i++)mutate(s,genome,changes);
+ const cleaned=pruneInvalidGenes(genome,s.mode);
+ genome.splice(0,genome.length,...cleaned.genePool);
+ for(const item of cleaned.removed)changes.push(`${CARDS[item.gene.id]?.name||item.gene.id} removed (lost ${item.requirements.join(', ')}).`);
  s.offspring.push({id:`offspring-${s.generation}-${s.offspring.length+1}`,genome,changes,hpBonus:s.offspringProtection});s.pendingMutations=0;
  log(s,`${s.mode==='sexual'?'Mating':'Cell Division'} produced candidate ${s.offspring.length}${changes.length?` (${changes.length} genetic changes)`:' (near-clone)'}.`);
 }
