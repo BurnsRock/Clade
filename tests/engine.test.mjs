@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {STARTING_GENOME,ENCOUNTERS,ENEMIES,ENVIRONMENTS} from '../web/content.js';
+import {STARTING_GENOME,KINGDOMS,LINEAGES,startingGenomeFor,ENCOUNTERS,ENEMIES,ENVIRONMENTS} from '../web/content.js';
 import {startGame,play,endTurn,selectOffspring,chooseReward,canPlay,currentEnemy,currentEnvironment,getRewards} from '../web/engine.js';
 test('ten cards plus innate reproduction',()=>{
  const s=startGame('asexual',42);
@@ -9,6 +9,23 @@ test('ten cards plus innate reproduction',()=>{
  assert.equal(s.hand.length,4);
  assert.equal(s.preparation,true);
  assert.equal(canPlay(s,'reproduction'),true);
+});
+test('kingdom and class choices each start with a distinct ten-card genome',()=>{
+ assert.equal(KINGDOMS.length,4);
+ assert.equal(LINEAGES.length,8);
+ const genomes=LINEAGES.map(lineage=>startingGenomeFor(lineage.id));
+ for(const genome of genomes)assert.equal(genome.length,10);
+ assert.equal(new Set(genomes.map(genome=>genome.join(','))).size,LINEAGES.length);
+ assert.deepEqual(startingGenomeFor('mammalia'),STARTING_GENOME);
+});
+test('every lineage can pair with either reproductive strategy',()=>{
+ for(const lineage of LINEAGES){
+  for(const mode of ['asexual','sexual']){
+   const s=startGame(mode,51,lineage.id);
+   assert.equal(s.lineageId,lineage.id);
+   assert.equal(canPlay(s,'reproduction'),true,`${lineage.className} should allow ${mode} reproduction`);
+  }
+ }
 });
 test('three unique enemies and environments',()=>{
  assert.equal(ENCOUNTERS.length,3);

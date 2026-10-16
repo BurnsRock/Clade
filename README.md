@@ -16,6 +16,8 @@ Visit **http://localhost:4173**. No npm install or build is needed. The demo use
 
 ## Features
 
+- Choose from four kingdom groupings and eight playable classes, each with its own ten-card starting genome.
+- Pair any kingdom and class with either reproductive strategy; this prototype keeps taxonomy and reproduction independent.
 - Ten starting gene cards, plus an innate reproductive action separate from the deck.
 - Three enemies: Spore Leech, Rival Colony, and Marsh Stalker.
 - Three environmental hazards: Oxygen-Poor Swamp, Flash Flood, and Severe Drought, with effects on both sides.
@@ -45,4 +47,4 @@ See `docs/DEMO_RULES.md` for the precise game rules and prototype limitations.
 
 ## Notes
 
-This is a gameplay-first vertical slice, not a realistic evolutionary simulator. One encounter represents one generation. Reproduction is an innate action always available, rather than a random-draw card. At run start the player chooses asexual or sexual mode; a future version may unlock sexual reproduction through a boss relic. Branching speciation, larger gene pools, epigenetics, inherited objects, and cultural knowledge remain future extensions.
+This is a gameplay-first vertical slice, not a realistic evolutionary simulator. One encounter represents one generation. Kingdom and class are playable lineage presets; Protista is a loose prototype grouping. Reproductive strategy is deliberately independent of taxonomy, so every lineage can choose asexual or sexual reproduction. Reproduction is an innate action always available, rather than a random-draw card. A future version may unlock sexual reproduction through a boss relic. Branching speciation, larger gene pools, epigenetics, inherited objects, and cultural knowledge remain future extensions.

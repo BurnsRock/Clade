@@ -1,6 +1,6 @@
-import {CARDS} from './content.js';
-import {canPlay,chooseReward,currentEnemy,currentEnvironment,endTurn,enemyIntent,environmentIntent,play,selectOffspring,startGame} from './engine.js';
-const root=document.querySelector('#app');let state=null,selectedMode='asexual',showGenome=false;
+import {CARDS,KINGDOMS,LINEAGES} from './content.js';
+import {canPlay,chooseReward,currentEnemy,currentEnvironment,currentLineage,endTurn,enemyIntent,environmentIntent,play,selectOffspring,startGame} from './engine.js';
+const root=document.querySelector('#app');let state=null,selectedMode='asexual',selectedKingdom='animalia',selectedLineage='mammalia',showGenome=false;
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const pct=(n,max)=>Math.max(0,Math.min(100,n/max*100))+'%';
 const hpBar=(label,value,max,color)=>`<div class="meter"><div class="meter-label"><span>${label}</span><strong>${value} / ${max}</strong></div><div class="track"><div class="fill ${color}" style="width:${pct(value,max)}"></div></div></div>`;
@@ -11,27 +11,36 @@ function cardMarkup(uid,id,disabled=false){
  <div class="card-core"><div class="gene-name">${esc(c.name)}</div><p>${esc(c.description)}</p></div>
  <span class="gene-category">${c.kind.toUpperCase()}${c.exhaust?' · EXHAUST':''}</span></button>`;
 }
-function menu(){root.innerHTML=`<main class="intro-screen"><div class="ambient orb-one"></div><div class="ambient orb-two"></div><div class="intro-content">
+function menu(){const available=LINEAGES.filter(x=>x.kingdomId===selectedKingdom);root.innerHTML=`<main class="intro-screen"><div class="ambient orb-one"></div><div class="ambient orb-two"></div><div class="intro-content">
  <p class="eyebrow">AN EXPERIMENT IN NATURAL SELECTION</p><h1>CLA<span>DE</span><sup>α</sup></h1>
  <p class="hero-line">The genome is your deck.<br/>The enemy is extinction.</p>
  <p class="hero-copy">Express genes. Fight biological rivals. Reproduce before victory. Choose which offspring carries your lineage to the next generation.</p>
- <div class="setup-card"><p class="eyebrow">SELECT REPRODUCTIVE STRATEGY</p><div class="mode-grid">
- <button data-action="mode" data-mode="asexual" class="mode-option ${selectedMode==='asexual'?'selected':''}"><span class="mode-symbol">◎</span><strong>Asexual</strong><small>Cell Division · 1 Energy</small><span>Reliable near-clones. Use mutation to diversify.</span></button>
- <button data-action="mode" data-mode="sexual" class="mode-option ${selectedMode==='sexual'?'selected':''}"><span class="mode-symbol">∞</span><strong>Sexual</strong><small>Mating · 2 Energy</small><span>Recombine genes with a partner. More varied descendants.</span></button></div>
+ <div class="setup-card">
+ <section class="setup-step"><p class="eyebrow">1 · SELECT KINGDOM</p><div class="kingdom-grid">
+ ${KINGDOMS.map(k=>`<button type="button" data-action="kingdom" data-kingdom="${k.id}" class="kingdom-option ${selectedKingdom===k.id?'selected':''}" aria-pressed="${selectedKingdom===k.id}"><span class="kingdom-symbol">${k.icon}</span><span><strong>${esc(k.name)}</strong><small>${esc(k.description)}</small></span></button>`).join('')}
+ </div></section>
+ <section class="setup-step"><p class="eyebrow">2 · SELECT CLASS</p><div class="lineage-grid">
+ ${available.map(x=>`<button type="button" data-action="lineage" data-lineage="${x.id}" class="lineage-option ${selectedLineage===x.id?'selected':''}" aria-pressed="${selectedLineage===x.id}"><span class="lineage-symbol">${x.icon}</span><strong>${esc(x.className)}</strong><small>${esc(x.commonName)}</small><span>${esc(x.description)}</span></button>`).join('')}
+ </div></section>
+ <section class="setup-step"><p class="eyebrow">3 · SELECT REPRODUCTIVE STRATEGY</p><div class="mode-grid">
+ <button type="button" data-action="mode" data-mode="asexual" class="mode-option ${selectedMode==='asexual'?'selected':''}" aria-pressed="${selectedMode==='asexual'}"><span class="mode-symbol">◎</span><strong>Asexual</strong><small>Cell Division · 1 Energy</small><span>Reliable near-clones. Use mutation to diversify.</span></button>
+ <button type="button" data-action="mode" data-mode="sexual" class="mode-option ${selectedMode==='sexual'?'selected':''}" aria-pressed="${selectedMode==='sexual'}"><span class="mode-symbol">∞</span><strong>Sexual</strong><small>Mating · 2 Energy</small><span>Recombine genes with a partner. More varied descendants.</span></button></div>
+ <p class="setup-note">Pair any kingdom and class with either reproductive strategy. This is a playable evolutionary sandbox, not a strict taxonomy simulator.</p></section>
  <button class="primary-btn wide" data-action="start">BEGIN EVOLUTION <span>↗</span></button></div>
- <p class="intro-footer">10 starting gene cards · 3 generations · 3 enemies · 3 environments</p></div></main>`;}
-function topBar(s){return `<header class="topbar"><div class="logo">CLA<span>DE</span><sup>α</sup></div>
+ <p class="intro-footer">8 starting lineages · 10 gene cards each · 3 generations · 3 enemies · 3 environments</p></div></main>`;}
+function topBar(s){const lineage=currentLineage(s),kingdom=KINGDOMS.find(x=>x.id===lineage.kingdomId);return `<header class="topbar"><div class="logo">CLA<span>DE</span><sup>α</sup></div>
  <div class="top-stat"><small>GENERATION</small><strong>${String(s.generation).padStart(2,'0')} <em>/ 03</em></strong></div>
+ <div class="top-stat"><small>LINEAGE</small><strong>${esc(kingdom.name)} · ${esc(lineage.className)}</strong></div>
  <div class="top-stat"><small>REPRODUCTION</small><strong>${s.mode==='sexual'?'∞ SEXUAL':'◎ ASEXUAL'}</strong></div>
  <div class="top-actions"><button class="ghost-btn" data-action="genome">${showGenome?'HIDE':'VIEW'} GENOME <span>(${s.genePool.length})</span></button>
  <button class="ghost-btn danger-text" data-action="restart">↻ NEW RUN</button></div></header>`;}
 function environmentPanel(s){const e=currentEnvironment(s);return `<section class="environment-banner"><div class="env-icon">${e.icon}</div><div class="env-main"><span class="eyebrow">ENVIRONMENTAL PRESSURE · ${e.subtitle}</span><h2>${e.name}</h2><p>${e.description}</p></div>
  <div class="env-next"><small>NEXT EFFECT</small><strong>${environmentIntent(s)}</strong></div></section>`;}
 function arena(s){
- const enemy=currentEnemy(s),intent=enemyIntent(s);
+ const enemy=currentEnemy(s),intent=enemyIntent(s),lineage=currentLineage(s),kingdom=KINGDOMS.find(x=>x.id===lineage.kingdomId);
  return `<section class="arena">
- <div class="combatant hero-fighter"><div class="combatant-heading"><span class="eyebrow">YOUR LINEAGE</span><span class="creature-type">PRIMORDIAL ORGANISM</span></div>
- <div class="creature-glow friendly"><span>🧫</span></div><div class="fighter-name">Protoform ${String(s.generation).padStart(2,'0')}</div>
+ <div class="combatant hero-fighter"><div class="combatant-heading"><span class="eyebrow">YOUR LINEAGE</span><span class="creature-type">${esc(kingdom.name.toUpperCase())} · ${esc(lineage.className.toUpperCase())}</span></div>
+ <div class="creature-glow friendly"><span>${lineage.icon}</span></div><div class="fighter-name">${esc(lineage.commonName)} Lineage ${String(s.generation).padStart(2,'0')}</div>
  ${hpBar('VIABILITY',s.player.hp,s.player.maxHp,'friendly-fill')}<div class="status-row">${badge('⬡',s.player.block+' Block')}${s.player.toxin?badge('☣',s.player.toxin+' Toxin'):''}${s.hazardGuard?badge('◈',s.hazardGuard+' Resist'):''}</div></div>
  <div class="versus"><span>VS</span><div class="combat-divider"></div><small>GEN ${s.generation}</small></div>
  <div class="combatant hostile-fighter"><div class="combatant-heading"><span class="eyebrow">${enemy.epithet}</span><span class="creature-type">LETHAL ENCOUNTER</span></div>
@@ -104,7 +113,9 @@ root.addEventListener('click',event=>{
  const button=event.target.closest('button[data-action]');if(!button||button.disabled)return;
  const a=button.dataset.action;
  if(a==='mode'){selectedMode=button.dataset.mode;render();return;}
- if(a==='start'){state=startGame(selectedMode);showGenome=false;render();return;}
+ if(a==='kingdom'){selectedKingdom=button.dataset.kingdom;const available=LINEAGES.filter(x=>x.kingdomId===selectedKingdom);if(!available.some(x=>x.id===selectedLineage))selectedLineage=available[0].id;render();return;}
+ if(a==='lineage'){selectedLineage=button.dataset.lineage;render();return;}
+ if(a==='start'){state=startGame(selectedMode,Date.now(),selectedLineage);showGenome=false;render();return;}
  if(a==='restart'){state=null;showGenome=false;render();return;}
  if(!state)return;
  if(a==='genome'){showGenome=!showGenome;render();return;}
