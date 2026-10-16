@@ -14,6 +14,31 @@ export const CARDS = {
     adaptiveMetabolism: { id: 'adaptiveMetabolism', name: 'Efficient Metabolism', cost: 1, kind: 'utility', description: 'Gain 2 Energy. Heal 2 HP. Exhaust.', icon: '❋', exhaust: true }
 };
 export const STARTING_GENOME = ['strike', 'strike', 'membrane', 'membrane', 'venom', 'burst', 'regeneration', 'osmoregulation', 'neural', 'mutagenesis'];
+export const KINGDOMS = [
+    { id: 'animalia', name: 'Animalia', icon: '🐾', description: 'Mobile feeders, predators, and swarms.' },
+    { id: 'plantae', name: 'Plantae', icon: '🌿', description: 'Energy capture, water control, and durable tissues.' },
+    { id: 'fungi', name: 'Fungi', icon: '🍄', description: 'Decomposition, spores, and rapid growth.' },
+    { id: 'protista', name: 'Protista', icon: '🧫', description: 'A loose prototype group for single-celled eukaryotes.' }
+];
+export const LINEAGES = [
+    { id: 'mammalia', kingdomId: 'animalia', className: 'Mammalia', commonName: 'Mammals', icon: '🫀', description: 'A versatile starter with neural signaling and recovery.', replacements: [] },
+    { id: 'insecta', kingdomId: 'animalia', className: 'Insecta', commonName: 'Insects', icon: '🪲', description: 'Fast strikes and a reinforced membrane favor offense and defense.', replacements: [{ from: 'neural', to: 'swiftStrike' }, { from: 'regeneration', to: 'hardShell' }] },
+    { id: 'magnoliopsida', kingdomId: 'plantae', className: 'Magnoliopsida', commonName: 'Flowering plants', icon: '🌼', description: 'Efficient metabolism and extra recovery support endurance.', replacements: [{ from: 'neural', to: 'adaptiveMetabolism' }, { from: 'mutagenesis', to: 'regeneration' }] },
+    { id: 'pinopsida', kingdomId: 'plantae', className: 'Pinopsida', commonName: 'Conifers', icon: '🌲', description: 'Water control and reinforced tissues build a defensive deck.', replacements: [{ from: 'strike', to: 'osmoregulation' }, { from: 'neural', to: 'hardShell' }] },
+    { id: 'agaricomycetes', kingdomId: 'fungi', className: 'Agaricomycetes', commonName: 'Mushroom-forming fungi', icon: '🍄', description: 'Toxin and efficient metabolism turn resource use into pressure.', replacements: [{ from: 'strike', to: 'venom' }, { from: 'neural', to: 'adaptiveMetabolism' }] },
+    { id: 'saccharomycetes', kingdomId: 'fungi', className: 'Saccharomycetes', commonName: 'Yeasts', icon: '🫧', description: 'Rapid contraction and a second metabolic burst favor tempo.', replacements: [{ from: 'strike', to: 'swiftStrike' }, { from: 'membrane', to: 'burst' }] },
+    { id: 'euglenophyceae', kingdomId: 'protista', className: 'Euglenophyceae', commonName: 'Euglenids', icon: '🦠', description: 'Efficient metabolism and water control support flexible survival.', replacements: [{ from: 'strike', to: 'adaptiveMetabolism' }, { from: 'neural', to: 'osmoregulation' }] },
+    { id: 'dinophyceae', kingdomId: 'protista', className: 'Dinophyceae', commonName: 'Dinoflagellates', icon: '✨', description: 'Toxin and mutation create a volatile, aggressive genome.', replacements: [{ from: 'strike', to: 'venom' }, { from: 'membrane', to: 'mutagenesis' }] }
+];
+export const lineageFor = id => LINEAGES.find(lineage => lineage.id === id) || LINEAGES[0];
+export function startingGenomeFor(lineageId = 'mammalia') {
+    const genome = [...STARTING_GENOME];
+    for (const replacement of lineageFor(lineageId).replacements) {
+        const index = genome.indexOf(replacement.from);
+        if (index !== -1) genome[index] = replacement.to;
+    }
+    return genome;
+}
 export const MUTATION_POOL = ['strike', 'membrane', 'venom', 'burst', 'regeneration', 'osmoregulation', 'neural', 'mutagenesis', 'swiftStrike', 'adaptiveMetabolism'];
 export const MATE_POOL = ['venom', 'regeneration', 'osmoregulation', 'neural', 'swiftStrike', 'adaptiveMetabolism', 'membrane'];
 export const ENEMIES = [

@@ -1,4 +1,4 @@
-import { CARDS, ENCOUNTERS, ENEMIES, ENVIRONMENTS, MATE_POOL, MUTATION_POOL, STARTING_GENOME } from './content.js';
+import { CARDS, ENCOUNTERS, ENEMIES, ENVIRONMENTS, MATE_POOL, MUTATION_POOL, lineageFor, startingGenomeFor } from './content.js';
 
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const copy=s=>structuredClone(s);
@@ -13,12 +13,14 @@ function encounter(s){
  s.drawPile=shuffle(s,s.genePool);s.discardPile=[];s.hand=[];s.exhaustPile=[];s.offspring=[];s.pendingMutations=0;s.offspringProtection=0;s.hazardGuard=0;s.log=[];
  draw(s,4);log(s,`Generation ${s.generation}. Preparation: the enemy cannot act yet.`);return s;
 }
-export function startGame(mode,seed=Date.now()){
- const s={seed:seed>>>0,phase:'battle',mode,generation:1,round:0,preparation:true,energy:3,energyPenalty:0,reproducedThisTurn:false,
+export function startGame(mode,seed=Date.now(),lineageId='mammalia'){
+ const lineage=lineageFor(lineageId);
+ const s={seed:seed>>>0,phase:'battle',mode,lineageId:lineage.id,generation:1,round:0,preparation:true,energy:3,energyPenalty:0,reproducedThisTurn:false,
  player:{hp:70,maxHp:70,block:0,toxin:0},enemy:{hp:29,maxHp:29,block:0,toxin:0},
- genePool:STARTING_GENOME.map((id,i)=>({id,uid:`g${i}`})),drawPile:[],discardPile:[],hand:[],exhaustPile:[],offspring:[],pendingMutations:0,offspringProtection:0,hazardGuard:0,rewards:[],log:[],nextUid:10,lossReason:''};
+ genePool:startingGenomeFor(lineage.id).map((id,i)=>({id,uid:`g${i}`})),drawPile:[],discardPile:[],hand:[],exhaustPile:[],offspring:[],pendingMutations:0,offspringProtection:0,hazardGuard:0,rewards:[],log:[],nextUid:10,lossReason:''};
  return encounter(s);
 }
+export const currentLineage=s=>lineageFor(s.lineageId);
 export const currentEnemy=s=>ENEMIES.find(x=>x.id===ENCOUNTERS[s.generation-1].enemy);
 export const currentEnvironment=s=>ENVIRONMENTS.find(x=>x.id===ENCOUNTERS[s.generation-1].environment);
 export function enemyIntent(s){
