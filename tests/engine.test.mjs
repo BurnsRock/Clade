@@ -35,11 +35,11 @@ test('class signature genes pass their traits to the lineage',()=>{
   assert.ok(signature.traits.some(trait=>currentTraits(s).includes(trait)),`${lineage.className} should inherit a signature trait`);
  }
 });
-test('six unique enemies and environments',()=>{
- assert.equal(ENCOUNTERS.length,6);
- assert.equal(new Set(ENCOUNTERS.map(x=>x.enemy)).size,6);
- assert.equal(new Set(ENCOUNTERS.map(x=>x.environment)).size,6);
- assert.equal(ENEMIES.length,6);assert.equal(ENVIRONMENTS.length,6);
+test('ten unique enemies and environments',()=>{
+ assert.equal(ENCOUNTERS.length,10);
+ assert.equal(new Set(ENCOUNTERS.map(x=>x.enemy)).size,10);
+ assert.equal(new Set(ENCOUNTERS.map(x=>x.environment)).size,10);
+ assert.equal(ENEMIES.length,10);assert.equal(ENVIRONMENTS.length,10);
 });
 test('gene and encounter catalogs have no dangling references',()=>{
  const ids=new Set(Object.keys(CARDS));
@@ -163,13 +163,22 @@ test('sporefall applies toxin to both organisms on its telegraphed turn',()=>{
  assert.equal(s.player.toxin,2);
  assert.equal(s.enemy.toxin,2);
 });
-test('six generations win',()=>{
+test('ten generations win',()=>{
  let s=startGame('asexual',9);
  for(let gen=1;gen<=ENCOUNTERS.length;gen++){
  s.phase='offspring';s.offspring=[{id:'test',genome:s.genePool.map(x=>({...x})),changes:[],hpBonus:0}];
  s=selectOffspring(s,'test');if(gen<ENCOUNTERS.length)s=chooseReward(s,'skip');
  }
  assert.equal(s.phase,'won');assert.equal(s.generation,ENCOUNTERS.length);
+});
+test('the final four encounters raise the campaign stakes',()=>{
+ const s=startGame('asexual',10);
+ s.generation=7;
+ assert.equal(currentEnemy(s).id,'riftGrazer');
+ s.generation=10;
+ assert.equal(currentEnemy(s).id,'extinctionPrime');
+ assert.equal(currentEnemy(s).hp,112);
+ assert.equal(currentEnvironment(s).id,'impactWinter');
 });
 test('hypoxic hazard hurts both despite block',()=>{
  let s=startGame('asexual',23);

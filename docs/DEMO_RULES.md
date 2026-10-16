@@ -3,7 +3,7 @@
 - You play a lineage, not an individual creature.
 - At run start, choose one of four kingdom groupings and one of eight classes. Each class starts with a distinct ten-card genome and signature gene; Protista is a loose prototype grouping.
 - Choose asexual or sexual reproduction independently of kingdom and class. The prototype deliberately permits every pairing.
-- Six lethal enemy encounters, each in a distinct environment, form a complete six-generation run.
+- Ten lethal enemy encounters, each in a distinct environment, form a complete ten-generation run. The final four encounters raise enemy vitality and attack pressure.
 - Class signature genes contribute inheritable traits. Traits persist through selected offspring and can be gained or lost through mutation and recombination.
 - A ten-card genome powers combat; the innate reproductive action sits outside that deck.
 - Preparation (turn 0) prevents attacking but allows defensive setup and reproduction.

@@ -20,8 +20,8 @@ Visit **http://localhost:4173**. No npm install or build is needed. The demo use
 - Pair any kingdom and class with either reproductive strategy; this prototype keeps taxonomy and reproduction independent.
 - Class signature genes contribute inheritable traits such as Flight, Social Signaling, and Mycelial Network.
 - Trait and gene prerequisites unlock advanced genes; newly unlocked trait genes are guaranteed to appear among the next reward choices.
-- Six enemies: Spore Leech, Rival Colony, Marsh Stalker, Glasswing Moth, Carrion Bloom, and Apex Devourer.
-- Six environmental hazards with distinct, telegraphed effects on both sides.
+- Ten enemies, from Spore Leech to the final Extinction Prime.
+- Ten environmental hazards with distinct, telegraphed effects on both sides.
 - Turn 0 preparation, telegraphed enemy intents, energy, block, toxin, healing, card draw, and exhaust.
 - **Asexual Cell Division:** 1 Energy for a mostly identical offspring with occasional mutations.
 - **Sexual Mating:** 2 Energy for an offspring with two recombined genes from a simulated partner pool.
@@ -30,7 +30,7 @@ Visit **http://localhost:4173**. No npm install or build is needed. The demo use
 - Inherit a descendant genome and select an optional reward gene between generations.
 - Trait-gated rewards such as Aerial Dive, Social Learning, Toolmaking, Spore Cloud, and Networked Defense.
 - Gene prerequisites, including cognition-gated Protect Offspring for sexual lineages.
-- Six-generation campaign with victory and extinction states.
+- Ten-generation campaign with a rising difficulty curve, victory, and extinction states.
 
 ## Architecture
 
