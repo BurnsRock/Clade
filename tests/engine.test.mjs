@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {STARTING_GENOME,KINGDOMS,LINEAGES,startingGenomeFor,ENCOUNTERS,ENEMIES,ENVIRONMENTS} from '../web/content.js';
-import {startGame,play,endTurn,selectOffspring,chooseReward,canPlay,currentEnemy,currentEnvironment,getRewards} from '../web/engine.js';
+import {CARDS,ENCOUNTERS,ENEMIES,ENVIRONMENTS,KINGDOMS,LINEAGES,MATE_POOL,MUTATION_POOL,REWARD_POOL,STARTING_GENOME,TRAIT_LABELS,startingGenomeFor} from '../web/content.js';
+import {startGame,play,endTurn,selectOffspring,chooseReward,canPlay,currentEnemy,currentEnvironment,currentTraits,enemyIntent,environmentIntent,getRewards,isCardUnlocked} from '../web/engine.js';
 test('ten cards plus innate reproduction',()=>{
  const s=startGame('asexual',42);
  assert.equal(STARTING_GENOME.length,10);
@@ -16,7 +16,8 @@ test('kingdom and class choices each start with a distinct ten-card genome',()=>
  const genomes=LINEAGES.map(lineage=>startingGenomeFor(lineage.id));
  for(const genome of genomes)assert.equal(genome.length,10);
  assert.equal(new Set(genomes.map(genome=>genome.join(','))).size,LINEAGES.length);
- assert.deepEqual(startingGenomeFor('mammalia'),STARTING_GENOME);
+ for(const lineage of LINEAGES)assert.ok(startingGenomeFor(lineage.id).includes(lineage.signatureCard));
+ assert.notDeepEqual(startingGenomeFor('mammalia'),STARTING_GENOME);
 });
 test('every lineage can pair with either reproductive strategy',()=>{
  for(const lineage of LINEAGES){
@@ -27,11 +28,31 @@ test('every lineage can pair with either reproductive strategy',()=>{
   }
  }
 });
-test('three unique enemies and environments',()=>{
- assert.equal(ENCOUNTERS.length,3);
- assert.equal(new Set(ENCOUNTERS.map(x=>x.enemy)).size,3);
- assert.equal(new Set(ENCOUNTERS.map(x=>x.environment)).size,3);
- assert.equal(ENEMIES.length,3);assert.equal(ENVIRONMENTS.length,3);
+test('class signature genes pass their traits to the lineage',()=>{
+ for(const lineage of LINEAGES){
+  const s=startGame('asexual',57,lineage.id),signature=CARDS[lineage.signatureCard];
+  assert.ok(s.genePool.some(g=>g.id===lineage.signatureCard));
+  assert.ok(signature.traits.some(trait=>currentTraits(s).includes(trait)),`${lineage.className} should inherit a signature trait`);
+ }
+});
+test('six unique enemies and environments',()=>{
+ assert.equal(ENCOUNTERS.length,6);
+ assert.equal(new Set(ENCOUNTERS.map(x=>x.enemy)).size,6);
+ assert.equal(new Set(ENCOUNTERS.map(x=>x.environment)).size,6);
+ assert.equal(ENEMIES.length,6);assert.equal(ENVIRONMENTS.length,6);
+});
+test('gene and encounter catalogs have no dangling references',()=>{
+ const ids=new Set(Object.keys(CARDS));
+ for(const [id,card] of Object.entries(CARDS)){
+  for(const required of card.requires||[])assert.ok(ids.has(required),`${id} requires unknown gene ${required}`);
+  for(const trait of [...(card.traits||[]),...(card.requiresTraits||[])])assert.ok(TRAIT_LABELS[trait],`${id} uses unlabeled trait ${trait}`);
+ }
+ for(const id of [...MATE_POOL,...MUTATION_POOL,...REWARD_POOL])assert.ok(ids.has(id),`Pool references unknown gene ${id}`);
+ for(const lineage of LINEAGES)assert.ok(ids.has(lineage.signatureCard),`${lineage.className} has an unknown signature gene`);
+ for(const encounter of ENCOUNTERS){
+  assert.ok(ENEMIES.some(enemy=>enemy.id===encounter.enemy),`Unknown enemy ${encounter.enemy}`);
+  assert.ok(ENVIRONMENTS.some(environment=>environment.id===encounter.environment),`Unknown environment ${encounter.environment}`);
+ }
 });
 test('division produces a candidate and consumes energy immutably',()=>{
  const s=startGame('asexual',42),n=play(s,'reproduction');
@@ -75,13 +96,58 @@ test('Protect Offspring is gated on sex and cognition',()=>{
  for(let seed=1;seed<31;seed++){sex.seed=seed;if(getRewards(sex).includes('protectOffspring'))found=true;}
  assert.equal(found,true);
 });
-test('three generations win',()=>{
+test('inherited traits unlock advanced genes and surface them in rewards',()=>{
+ const mammal=startGame('sexual',91,'mammalia');
+ assert.ok(currentTraits(mammal).includes('social'));
+ assert.equal(isCardUnlocked(mammal,'socialLearning'),true);
+ assert.equal(isCardUnlocked(mammal,'cooperativeHunt'),true);
+ assert.ok(getRewards(mammal).some(id=>CARDS[id].requiresTraits?.length));
+
+ const insect=startGame('asexual',92,'insecta');
+ assert.equal(isCardUnlocked(insect,'aerialDive'),true);
+ const fungus=startGame('asexual',93,'agaricomycetes');
+ assert.equal(isCardUnlocked(fungus,'sporeCloud'),true);
+ assert.equal(isCardUnlocked(fungus,'networkedDefense'),false);
+ fungus.genePool.push({id:'neural',uid:'trait-test-neural'});
+ assert.equal(isCardUnlocked(fungus,'networkedDefense'),true);
+});
+test('class signature cards have playable effects',()=>{
+ const s=startGame('asexual',94,'mammalia');
+ s.hand=[{id:'parentalCare',uid:'signature'}];
+ const next=play(s,'signature');
+ assert.equal(next.player.block,6);
+ assert.equal(next.offspringProtection,3);
+ assert.equal(s.offspringProtection,0);
+});
+test('new enemies telegraph their own move patterns',()=>{
+ const s=startGame('asexual',95);
+ s.generation=4;s.round=1;
+ assert.equal(currentEnemy(s).id,'glasswing');
+ assert.equal(enemyIntent(s).name,'Dive');
+ s.round=3;
+ assert.equal(enemyIntent(s).name,'Razor Wings');
+});
+test('enemy block lasts through the next player turn',()=>{
+ let s=startGame('asexual',96);
+ s.generation=2;s.preparation=false;s.round=2;s.hand=[];s.discardPile=[];
+ s=endTurn(s);
+ assert.equal(s.enemy.block,8);
+});
+test('sporefall applies toxin to both organisms on its telegraphed turn',()=>{
+ let s=startGame('asexual',97);
+ s.generation=5;s.preparation=false;s.round=2;s.hand=[];s.discardPile=[];
+ assert.match(environmentIntent(s),/Toxin/);
+ s=endTurn(s);
+ assert.equal(s.player.toxin,2);
+ assert.equal(s.enemy.toxin,2);
+});
+test('six generations win',()=>{
  let s=startGame('asexual',9);
- for(let gen=1;gen<=3;gen++){
+ for(let gen=1;gen<=ENCOUNTERS.length;gen++){
  s.phase='offspring';s.offspring=[{id:'test',genome:s.genePool.map(x=>({...x})),changes:[],hpBonus:0}];
- s=selectOffspring(s,'test');if(gen<3)s=chooseReward(s,'skip');
+ s=selectOffspring(s,'test');if(gen<ENCOUNTERS.length)s=chooseReward(s,'skip');
  }
- assert.equal(s.phase,'won');assert.equal(s.generation,3);
+ assert.equal(s.phase,'won');assert.equal(s.generation,ENCOUNTERS.length);
 });
 test('hypoxic hazard hurts both despite block',()=>{
  let s=startGame('asexual',23);

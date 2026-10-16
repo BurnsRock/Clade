@@ -16,19 +16,21 @@ Visit **http://localhost:4173**. No npm install or build is needed. The demo use
 
 ## Features
 
-- Choose from four kingdom groupings and eight playable classes, each with its own ten-card starting genome.
+- Choose from four kingdom groupings and eight playable classes, each with a distinct ten-card genome and a class signature gene.
 - Pair any kingdom and class with either reproductive strategy; this prototype keeps taxonomy and reproduction independent.
-- Ten starting gene cards, plus an innate reproductive action separate from the deck.
-- Three enemies: Spore Leech, Rival Colony, and Marsh Stalker.
-- Three environmental hazards: Oxygen-Poor Swamp, Flash Flood, and Severe Drought, with effects on both sides.
+- Class signature genes contribute inheritable traits such as Flight, Social Signaling, and Mycelial Network.
+- Trait and gene prerequisites unlock advanced genes; newly unlocked trait genes are guaranteed to appear among the next reward choices.
+- Six enemies: Spore Leech, Rival Colony, Marsh Stalker, Glasswing Moth, Carrion Bloom, and Apex Devourer.
+- Six environmental hazards with distinct, telegraphed effects on both sides.
 - Turn 0 preparation, telegraphed enemy intents, energy, block, toxin, healing, card draw, and exhaust.
 - **Asexual Cell Division:** 1 Energy for a mostly identical offspring with occasional mutations.
 - **Sexual Mating:** 2 Energy for an offspring with two recombined genes from a simulated partner pool.
 - Reproduction can happen once per turn, generating up to three offspring choices in a generation.
 - Error-Prone Replication raises mutation opportunities at a cost in HP and energy.
 - Inherit a descendant genome and select an optional reward gene between generations.
+- Trait-gated rewards such as Aerial Dive, Social Learning, Toolmaking, Spore Cloud, and Networked Defense.
 - Gene prerequisites, including cognition-gated Protect Offspring for sexual lineages.
-- Three-generation campaign with victory and extinction states.
+- Six-generation campaign with victory and extinction states.
 
 ## Architecture
 
