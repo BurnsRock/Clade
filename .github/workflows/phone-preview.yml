@@ -1,6 +1,9 @@
-name: Clade CI and phone preview
+name: Clade CI and main preview
 
 on:
+  push:
+    branches:
+      - main
   pull_request:
     branches:
       - main
@@ -8,7 +11,6 @@ on:
       - opened
       - synchronize
       - reopened
-      - closed
 
 permissions:
   contents: read
@@ -19,10 +21,9 @@ concurrency:
 
 jobs:
   test:
-    if: github.event.action != 'closed'
     runs-on: ubuntu-latest
     steps:
-      - name: Check out pull request
+      - name: Check out source
         uses: actions/checkout@v7
       - name: Set up Node.js
         uses: actions/setup-node@v7
@@ -33,10 +34,7 @@ jobs:
 
   publish:
     needs: test
-    if: >-
-      always() &&
-      github.event.pull_request.head.repo.full_name == github.repository &&
-      (needs.test.result == 'success' || github.event.action == 'closed')
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -44,20 +42,12 @@ jobs:
       id-token: write
     environment:
       name: github-pages
-      url: ${{ steps.configure-pages.outcome == 'success' && (github.event.action == 'closed' && steps.deploy.outputs.page_url || format('{0}previews/pr-{1}/', steps.deploy.outputs.page_url, github.event.number)) || '' }}
+      url: ${{ steps.configure-pages.outcome == 'success' && steps.deploy.outputs.page_url || '' }}
     steps:
-      - name: Check out the pull request
-        if: github.event.action != 'closed'
+      - name: Check out main
         uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          path: preview-source
-          persist-credentials: false
-      - name: Check out the base branch
-        uses: actions/checkout@v7
-        with:
-          ref: ${{ github.event.pull_request.base.ref }}
-          path: base-source
+          ref: main
           persist-credentials: false
       - name: Configure GitHub Pages
         id: configure-pages
@@ -65,39 +55,30 @@ jobs:
         continue-on-error: true
       - name: Assemble the site
         if: steps.configure-pages.outcome == 'success'
-        env:
-          PR_NUMBER: ${{ github.event.number }}
-          EVENT_ACTION: ${{ github.event.action }}
         run: |
           set -euo pipefail
           mkdir -p site/web
-          cp base-source/index.html base-source/style.css site/
-          cp -R base-source/web/. site/web/
+          cp index.html style.css site/
+          cp -R web/. site/web/
           touch site/.nojekyll
-          if [ "$EVENT_ACTION" != "closed" ]; then
-            preview="site/previews/pr-${PR_NUMBER}"
-            mkdir -p "$preview/web"
-            cp preview-source/index.html preview-source/style.css "$preview/"
-            cp -R preview-source/web/. "$preview/web/"
-          fi
       - name: Upload Pages artifact
         if: steps.configure-pages.outcome == 'success'
         uses: actions/upload-pages-artifact@v4
         with:
           path: site
-      - name: Deploy site
+      - name: Deploy main preview
         if: steps.configure-pages.outcome == 'success'
         id: deploy
         uses: actions/deploy-pages@v4
       - name: Write preview link to the run summary
-        if: github.event.action != 'closed' && steps.configure-pages.outcome == 'success'
+        if: steps.configure-pages.outcome == 'success'
         env:
-          PREVIEW_URL: ${{ steps.deploy.outputs.page_url }}previews/pr-${{ github.event.number }}/
+          PREVIEW_URL: ${{ steps.deploy.outputs.page_url }}
         run: |
-          echo '## Phone playtest preview' >> "$GITHUB_STEP_SUMMARY"
-          echo "[Open this pull request's preview]($PREVIEW_URL)" >> "$GITHUB_STEP_SUMMARY"
+          echo '## Main branch phone preview' >> "$GITHUB_STEP_SUMMARY"
+          echo "[Open the main branch preview]($PREVIEW_URL)" >> "$GITHUB_STEP_SUMMARY"
       - name: Explain Pages setup requirement
-        if: github.event.action != 'closed' && steps.configure-pages.outcome != 'success'
+        if: steps.configure-pages.outcome != 'success'
         run: |
           {
             echo '## Phone preview not published'
