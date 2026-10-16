@@ -1,4 +1,4 @@
-import { CARDS, ENCOUNTERS, ENEMIES, ENVIRONMENTS, MATE_POOL, MUTATION_POOL, lineageFor, startingGenomeFor } from './content.js';
+import { CARDS, ENCOUNTERS, ENEMIES, ENVIRONMENTS, MATE_POOL, MUTATION_POOL, REWARD_POOL, lineageFor, startingGenomeFor } from './content.js';
 
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const copy=s=>structuredClone(s);
@@ -23,29 +23,35 @@ export function startGame(mode,seed=Date.now(),lineageId='mammalia'){
 export const currentLineage=s=>lineageFor(s.lineageId);
 export const currentEnemy=s=>ENEMIES.find(x=>x.id===ENCOUNTERS[s.generation-1].enemy);
 export const currentEnvironment=s=>ENVIRONMENTS.find(x=>x.id===ENCOUNTERS[s.generation-1].environment);
+export const currentTraits=s=>[...new Set(s.genePool.flatMap(g=>CARDS[g.id]?.traits||[]))].sort();
 export function enemyIntent(s){
- const turn=(Math.max(s.round,1)-1)%3,id=currentEnemy(s).id;
- if(id==='leech')return [{name:'Infect',description:'6 damage + 2 Toxin',kind:'attack'},{name:'Leech',description:'7 damage, heal 3',kind:'attack'},{name:'Lunge',description:'9 damage',kind:'attack'}][turn];
- if(id==='colony')return [{name:'Swarm',description:'3 damage × 3',kind:'attack'},{name:'Fortify',description:'Gain 8 Block',kind:'defense'},{name:'Crush',description:'12 damage',kind:'attack'}][turn];
- return [{name:'Rake',description:'11 damage',kind:'attack'},{name:'Stalk',description:'Gain 8 Block',kind:'defense'},{name:'Pounce',description:'16 damage',kind:'attack'}][turn];
+ const moves=currentEnemy(s).moves,turn=(Math.max(s.round,1)-1)%moves.length;
+ return moves[turn];
 }
 export function environmentIntent(s){
  if(s.preparation)return 'Dormant during preparation';
- const id=currentEnvironment(s).id;
- if(id==='hypoxia')return s.round%2===0?'This turn: -2 HP to both; -1 next Energy':'No hazard this turn';
- if(id==='flood')return s.round%2===0?'This turn: -4 HP to both':'Waters rising';
- return s.round>1?'This turn: -3 HP to both':'Heat intensifying';
+ const environment=currentEnvironment(s),hazard=environment.hazard;
+ const active=s.round>=hazard.firstRound&&(s.round-hazard.firstRound)%hazard.every===0;
+ return active?environment.hazardIntent:environment.quietIntent;
 }
 const direct=(fighter,d)=>fighter.hp=Math.max(0,fighter.hp-d);
 function hit(fighter,d){const block=Math.min(fighter.block,d);fighter.block-=block;direct(fighter,d-block);return d-block;}
 function attack(s,d){log(s,`You deal ${hit(s.enemy,d)} damage (${d} attack).`);}
+function heal(s,amount){const reduction=currentEnvironment(s).hazard.healingPenalty||0;s.player.hp=clamp(s.player.hp+Math.max(1,amount-reduction),0,s.player.maxHp);}
+function protectOffspring(s,amount){s.offspringProtection+=amount;s.offspring=s.offspring.map(o=>({...o,hpBonus:o.hpBonus+amount}));}
 function lose(s,t){s.phase='lost';s.lossReason=t;log(s,t);}
 function checkVictory(s){
  if(s.enemy.hp>0||s.phase!=='battle')return;
  if(!s.offspring.length)lose(s,'Enemy defeated, but the lineage produced no offspring. Extinction.');
  else{s.phase='offspring';log(s,`Enemy defeated! Choose one of ${s.offspring.length} offspring.`);}
 }
-function eligible(s,id){const c=CARDS[id];return (!c.requiresReproduction||c.requiresReproduction===s.mode)&&(c.requires||[]).every(req=>s.genePool.some(x=>x.id===req));}
+function eligible(s,id){
+ const c=CARDS[id];if(!c)return false;
+ return (!c.requiresReproduction||c.requiresReproduction===s.mode)
+  &&(c.requires||[]).every(req=>s.genePool.some(x=>x.id===req))
+  &&(c.requiresTraits||[]).every(req=>currentTraits(s).includes(req));
+}
+export const isCardUnlocked=(s,id)=>eligible(s,id);
 export function canPlay(s,uid){
  if(s.phase!=='battle')return false;
  if(uid==='reproduction')return !s.reproducedThisTurn&&s.offspring.length<3&&s.energy>=(s.mode==='sexual'?2:1);
@@ -81,13 +87,31 @@ export function play(before,uid){
  case 'hardShell':s.player.block+=11;break;
  case 'venom':attack(s,3);s.enemy.toxin+=3;log(s,'Enemy gained 3 Toxin.');break;
  case 'burst':s.energy++;draw(s,2);break;
- case 'regeneration':s.player.hp=clamp(s.player.hp+(currentEnvironment(s).id==='drought'?4:6),0,s.player.maxHp);break;
+ case 'regeneration':heal(s,6);break;
  case 'osmoregulation':s.player.block+=4;s.hazardGuard++;break;
  case 'neural':draw(s,2);break;
  case 'cognitiveLeap':s.energy++;draw(s,2);break;
  case 'mutagenesis':s.pendingMutations++;direct(s.player,2);break;
- case 'adaptiveMetabolism':s.energy+=2;s.player.hp=clamp(s.player.hp+2,0,s.player.maxHp);break;
- case 'protectOffspring':s.offspringProtection+=6;s.offspring=s.offspring.map(o=>({...o,hpBonus:o.hpBonus+6}));break;
+ case 'adaptiveMetabolism':s.energy+=2;heal(s,2);break;
+ case 'protectOffspring':protectOffspring(s,6);break;
+ case 'parentalCare':s.player.block+=6;protectOffspring(s,3);break;
+ case 'chitinousWings':s.player.block+=8;break;
+ case 'photosyntheticPulse':s.energy++;heal(s,3);break;
+ case 'resinousNeedles':s.player.block+=6;s.enemy.toxin+=2;log(s,'Enemy gained 2 Toxin.');break;
+ case 'mycelialNetwork':s.player.block+=5;draw(s,1);break;
+ case 'buddingBurst':draw(s,2);break;
+ case 'mixotrophicShift':s.energy++;heal(s,3);break;
+ case 'toxicBloom':attack(s,4);s.enemy.toxin+=3;log(s,'Enemy gained 3 Toxin.');break;
+ case 'prehensileGrip':s.player.block+=8;break;
+ case 'socialSignals':draw(s,2);break;
+ case 'glidingMembrane':s.player.block+=7;break;
+ case 'sporeDispersal':draw(s,2);break;
+ case 'aerialDive':attack(s,12);break;
+ case 'socialLearning':draw(s,3);break;
+ case 'toolmaking':attack(s,6);s.player.block+=5;break;
+ case 'sporeCloud':attack(s,3);s.enemy.toxin+=4;log(s,'Enemy gained 4 Toxin.');break;
+ case 'networkedDefense':s.player.block+=9;heal(s,3);break;
+ case 'cooperativeHunt':attack(s,14);break;
  }
  if(c.exhaust)s.exhaustPile.push(inst);else s.discardPile.push(inst);
  if(s.player.hp<=0)lose(s,'Your organism died before the lineage could continue.');else checkVictory(s);
@@ -95,28 +119,27 @@ export function play(before,uid){
 }
 function enemyAct(s){
  if(s.enemy.hp<=0)return;
- const id=currentEnemy(s).id,t=(s.round-1)%3,strike=d=>log(s,`${currentEnemy(s).name} hits for ${hit(s.player,d)}.`);
- if(id==='leech'){
-  if(t===0){strike(6);s.player.toxin+=2;log(s,'You gained 2 Toxin.');}
-  else if(t===1){strike(7);s.enemy.hp=clamp(s.enemy.hp+3,0,s.enemy.maxHp);}else strike(9);
- }else if(id==='colony'){
-  if(t===0){for(let i=0;i<3;i++)strike(3);}
-  else if(t===1){s.enemy.block+=8;log(s,'The colony gains 8 Block.');}
-  else strike(12);
- }else{
-  if(t===0)strike(11);
-  else if(t===1){s.enemy.block+=8;log(s,'The stalker gains 8 Block.');}
-  else strike(16);
- }
+ const enemy=currentEnemy(s),move=enemy.moves[(s.round-1)%enemy.moves.length];
+ s.enemy.block=0;
+ if(move.damage){for(let i=0;i<(move.hits||1);i++)log(s,`${enemy.name} hits for ${hit(s.player,move.damage)}.`);}
+ if(move.toxin){s.player.toxin+=move.toxin;log(s,`You gained ${move.toxin} Toxin.`);}
+ if(move.block){s.enemy.block+=move.block;log(s,`${enemy.name} gains ${move.block} Block.`);}
+ if(move.heal){s.enemy.hp=clamp(s.enemy.hp+move.heal,0,s.enemy.maxHp);log(s,`${enemy.name} heals ${move.heal}.`);}
 }
 function environmentAct(s){
- const id=currentEnvironment(s).id;
- let d=0;if(id==='hypoxia'&&s.round%2===0){d=2;s.energyPenalty=1;}
- else if(id==='flood'&&s.round%2===0)d=4;
- else if(id==='drought'&&s.round>1)d=3;
- if(!d)return;direct(s.enemy,d);
- if(s.hazardGuard>0){s.hazardGuard--;log(s,`Osmoregulation negated ${d} environmental damage.`);}
- else{direct(s.player,d);log(s,`${currentEnvironment(s).name} deals ${d} to both sides.`);}
+ const environment=currentEnvironment(s),hazard=environment.hazard;
+ const active=s.round>=hazard.firstRound&&(s.round-hazard.firstRound)%hazard.every===0;
+ if(!active)return;
+ if(hazard.damage)direct(s.enemy,hazard.damage);
+ const guarded=s.hazardGuard>0;
+ if(guarded){s.hazardGuard--;log(s,'Osmoregulation negated the environmental effect.');}
+ else{
+  if(hazard.energyPenalty)s.energyPenalty=hazard.energyPenalty;
+  if(hazard.damage)direct(s.player,hazard.damage);
+  if(hazard.toxin){s.player.toxin+=hazard.toxin;log(s,`${environment.name} gives you ${hazard.toxin} Toxin.`);}
+ }
+ if(hazard.toxin){s.enemy.toxin+=hazard.toxin;log(s,`${environment.name} gives the enemy ${hazard.toxin} Toxin.`);}
+ if(hazard.damage&&!guarded)log(s,`${environment.name} deals ${hazard.damage} to both sides.`);
 }
 export function endTurn(before){
  if(before.phase!=='battle')return before;
@@ -131,7 +154,7 @@ export function endTurn(before){
   if(s.enemy.hp>0)environmentAct(s);
   if(s.player.hp<=0){lose(s,'The environment destroyed your last organism.');return s;}
   checkVictory(s);if(s.phase!=='battle')return s;
-  s.round++;s.player.block=0;s.enemy.block=0;
+  s.round++;s.player.block=0;
  }
  s.energy=Math.max(1,3-s.energyPenalty);s.energyPenalty=0;s.reproducedThisTurn=false;draw(s,5);return s;
 }
@@ -140,12 +163,15 @@ export function selectOffspring(before,id){
  const candidate=before.offspring.find(x=>x.id===id);if(!candidate)return before;
  const s=copy(before);s.genePool=candidate.genome.map(x=>({...x}));s.player.maxHp=70+candidate.hpBonus;
  s.player.hp=Math.min(s.player.maxHp,s.player.hp+20+candidate.hpBonus);s.player.block=0;s.player.toxin=0;
- if(s.generation===ENCOUNTERS.length){s.phase='won';log(s,'Three generations survived. Your lineage persists!');return s;}
+ if(s.generation===ENCOUNTERS.length){s.phase='won';log(s,`${ENCOUNTERS.length} generations survived. Your lineage persists!`);return s;}
  s.rewards=getRewards(s);s.phase='reward';return s;
 }
 export function getRewards(s){
- const pool=['swiftStrike','hardShell','cognitiveLeap','adaptiveMetabolism','protectOffspring','venom','regeneration','membrane'];
- return shuffle(s,pool.filter(id=>eligible(s,id))).slice(0,3);
+ const available=REWARD_POOL.filter(id=>eligible(s,id));
+ const traitUnlocked=shuffle(s,available.filter(id=>(CARDS[id].requiresTraits||[]).length));
+ const first=traitUnlocked[0];
+ const remainder=shuffle(s,available.filter(id=>id!==first));
+ return [...(first?[first]:[]),...remainder.slice(0,3-(first?1:0))];
 }
 export function chooseReward(before,id){
  if(before.phase!=='reward'||(id!=='skip'&&!before.rewards.includes(id)))return before;
