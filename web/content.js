@@ -160,6 +160,42 @@ export const ENEMIES = [
             { name: 'Brace', description: 'Gain 12 Block', block: 12 },
             { name: 'Devour', description: '7 damage × 3, heal 4', damage: 7, hits: 3, heal: 4 }
         ]
+    },
+    {
+        id: 'riftGrazer', name: 'Rift Grazer', hp: 82, icon: '🦬', epithet: 'MIGRATING GIANT',
+        description: 'A massive grazer shrugs off smaller attacks and tramples anything in its path.',
+        moves: [
+            { name: 'Stampede', description: '6 damage × 2', damage: 6, hits: 2 },
+            { name: 'Ruminate', description: 'Gain 14 Block and heal 5', block: 14, heal: 5 },
+            { name: 'Earthshaker', description: '15 damage', damage: 15 }
+        ]
+    },
+    {
+        id: 'blightMatriarch', name: 'Blight Matriarch', hp: 90, icon: '🪷', epithet: 'TOXIC BLOOM',
+        description: 'A sprawling colony blankets the battlefield in toxins and living armor.',
+        moves: [
+            { name: 'Spore Burst', description: '7 damage + 3 Toxin', damage: 7, toxin: 3 },
+            { name: 'Thicken', description: 'Gain 16 Block', block: 16 },
+            { name: 'Blight Wave', description: '12 damage + 4 Toxin', damage: 12, toxin: 4 }
+        ]
+    },
+    {
+        id: 'glassback', name: 'Glassback Colossus', hp: 100, icon: '🦂', epithet: 'ARMORED TITAN',
+        description: 'A plated survivor turns every opening into a punishing counterattack.',
+        moves: [
+            { name: 'Shard Volley', description: '5 damage × 3', damage: 5, hits: 3 },
+            { name: 'Fortress Shell', description: 'Gain 20 Block', block: 20 },
+            { name: 'Rupture', description: '17 damage', damage: 17 }
+        ]
+    },
+    {
+        id: 'extinctionPrime', name: 'Extinction Prime', hp: 112, icon: '🦖', epithet: 'FINAL DOMINANT',
+        description: 'The last rival is a relentless survivor shaped by every pressure before it.',
+        moves: [
+            { name: 'Cataclysm', description: '18 damage', damage: 18 },
+            { name: 'Prime Guard', description: 'Gain 18 Block and heal 6', block: 18, heal: 6 },
+            { name: 'Final Hunger', description: '8 damage × 3, heal 6', damage: 8, hits: 3, heal: 6 }
+        ]
     }
 ];
 
@@ -199,6 +235,30 @@ export const ENVIRONMENTS = [
         description: 'Every third combat turn: a heat pulse deals 5 damage to both sides and reduces next-turn Energy by 1.',
         quietIntent: 'The vents rumble', hazardIntent: 'This turn: -5 HP to both; -1 next Energy',
         hazard: { firstRound: 3, every: 3, damage: 5, energyPenalty: 1 }
+    },
+    {
+        id: 'redTide', name: 'Red-Tide Estuary', icon: '🩸', subtitle: 'RED TIDE',
+        description: 'Every second combat turn: toxic algae add 3 Toxin to both combatants.',
+        quietIntent: 'The water churns', hazardIntent: 'This turn: +3 Toxin to both',
+        hazard: { firstRound: 2, every: 2, toxin: 3 }
+    },
+    {
+        id: 'sulfurHaze', name: 'Sulfur Haze', icon: '🌋', subtitle: 'SULFUR HAZE',
+        description: 'Every third combat turn: a gas burst deals 4 damage and adds 2 Toxin to both sides.',
+        quietIntent: 'The haze thickens', hazardIntent: 'This turn: -4 HP and +2 Toxin to both',
+        hazard: { firstRound: 3, every: 3, damage: 4, toxin: 2 }
+    },
+    {
+        id: 'wildfire', name: 'Wildfire Plain', icon: '🔥', subtitle: 'WILDFIRE',
+        description: 'Every second combat turn: fire deals 5 damage to both sides and weakens healing by 2.',
+        quietIntent: 'The grass crackles', hazardIntent: 'This turn: -5 HP to both; healing weakened',
+        hazard: { firstRound: 2, every: 2, damage: 5, healingPenalty: 2 }
+    },
+    {
+        id: 'impactWinter', name: 'Impact Winter', icon: '☄️', subtitle: 'IMPACT WINTER',
+        description: 'Every third combat turn: the cold deals 7 damage to both sides and reduces next-turn Energy by 1.',
+        quietIntent: 'Ash darkens the sky', hazardIntent: 'This turn: -7 HP to both; -1 next Energy',
+        hazard: { firstRound: 3, every: 3, damage: 7, energyPenalty: 1 }
     }
 ];
 
@@ -208,5 +268,9 @@ export const ENCOUNTERS = [
     { enemy: 'stalker', environment: 'drought' },
     { enemy: 'glasswing', environment: 'canopy' },
     { enemy: 'carrionBloom', environment: 'sporeRain' },
-    { enemy: 'apex', environment: 'thermalVents' }
+    { enemy: 'apex', environment: 'thermalVents' },
+    { enemy: 'riftGrazer', environment: 'redTide' },
+    { enemy: 'blightMatriarch', environment: 'sulfurHaze' },
+    { enemy: 'glassback', environment: 'wildfire' },
+    { enemy: 'extinctionPrime', environment: 'impactWinter' }
 ];
