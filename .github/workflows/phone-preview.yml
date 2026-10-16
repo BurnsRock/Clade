@@ -34,7 +34,9 @@ jobs:
 
   publish:
     needs: test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: >-
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -83,5 +85,4 @@ jobs:
           {
             echo '## Phone preview not published'
             echo 'GitHub Pages is not enabled for this repository yet. In **Settings → Pages**, choose **GitHub Actions** as the build and deployment source, then rerun this workflow.'
-            echo 'Because this repository is private, confirm its plan supports Pages first. A published Pages site is public to anyone with its URL.'
           } >> "$GITHUB_STEP_SUMMARY"
