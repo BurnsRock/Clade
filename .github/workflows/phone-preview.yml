@@ -44,7 +44,7 @@ jobs:
       id-token: write
     environment:
       name: github-pages
-      url: ${{ github.event.action == 'closed' && steps.deploy.outputs.page_url || format('{0}previews/pr-{1}/', steps.deploy.outputs.page_url, github.event.number) }}
+      url: ${{ steps.configure-pages.outcome == 'success' && (github.event.action == 'closed' && steps.deploy.outputs.page_url || format('{0}previews/pr-{1}/', steps.deploy.outputs.page_url, github.event.number)) || '' }}
     steps:
       - name: Check out the pull request
         if: github.event.action != 'closed'
@@ -60,8 +60,11 @@ jobs:
           path: base-source
           persist-credentials: false
       - name: Configure GitHub Pages
+        id: configure-pages
         uses: actions/configure-pages@v5
+        continue-on-error: true
       - name: Assemble the site
+        if: steps.configure-pages.outcome == 'success'
         env:
           PR_NUMBER: ${{ github.event.number }}
           EVENT_ACTION: ${{ github.event.action }}
@@ -78,16 +81,26 @@ jobs:
             cp -R preview-source/web/. "$preview/web/"
           fi
       - name: Upload Pages artifact
+        if: steps.configure-pages.outcome == 'success'
         uses: actions/upload-pages-artifact@v4
         with:
           path: site
       - name: Deploy site
+        if: steps.configure-pages.outcome == 'success'
         id: deploy
         uses: actions/deploy-pages@v4
       - name: Write preview link to the run summary
-        if: github.event.action != 'closed'
+        if: github.event.action != 'closed' && steps.configure-pages.outcome == 'success'
         env:
           PREVIEW_URL: ${{ steps.deploy.outputs.page_url }}previews/pr-${{ github.event.number }}/
         run: |
           echo '## Phone playtest preview' >> "$GITHUB_STEP_SUMMARY"
           echo "[Open this pull request's preview]($PREVIEW_URL)" >> "$GITHUB_STEP_SUMMARY"
+      - name: Explain Pages setup requirement
+        if: github.event.action != 'closed' && steps.configure-pages.outcome != 'success'
+        run: |
+          {
+            echo '## Phone preview not published'
+            echo 'GitHub Pages is not enabled for this repository yet. In **Settings → Pages**, choose **GitHub Actions** as the build and deployment source, then rerun this workflow.'
+            echo 'Because this repository is private, confirm its plan supports Pages first. A published Pages site is public to anyone with its URL.'
+          } >> "$GITHUB_STEP_SUMMARY"
